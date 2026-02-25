@@ -1,4 +1,4 @@
-# PaperShare
+# PaperSharer
 
 A lightweight PDF viewer with page-level comments, powered by GitHub Issues. Deploy any PDF to GitHub Pages as a GitHub Action.
 
