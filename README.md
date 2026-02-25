@@ -2,7 +2,7 @@
 
 A lightweight PDF viewer with page-level comments, powered by GitHub Issues. Deploy any PDF to GitHub Pages as a GitHub Action.
 
-## Use PaperShare in Your Repo
+## Use PaperSharer in Your Repo
 
 Add a PDF to your repo and create `.github/workflows/deploy.yml`:
 
@@ -22,10 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: haxybaxy/papershare@v1
+      - uses: haxybaxy/papersharer@v1
         with:
           pdf-path: paper.pdf # path to PDF in your repo
-          title: "My Research Paper" # optional, defaults to "PaperShare"
+          title: "My Research Paper" # optional, defaults to "PaperSharer"
           github-token: ${{ secrets.PAPERSHARE_TOKEN }} # optional, for comments
 
   deploy:
@@ -46,7 +46,7 @@ That's it. Push to `main` and your paper will be live at `https://<you>.github.i
 | Input          | Required | Default        | Description                                                          |
 | -------------- | -------- | -------------- | -------------------------------------------------------------------- |
 | `pdf-path`     | Yes      | —              | Path to the PDF file in your repo                                    |
-| `title`        | No       | `"PaperShare"` | Browser tab and page header title                                    |
+| `title`        | No       | `"PaperSharer"` | Browser tab and page header title                                    |
 | `github-token` | No       | —              | GitHub token with `Issues: Read and write` permission (for comments) |
 
 ### Setup
@@ -56,7 +56,7 @@ That's it. Push to `main` and your paper will be live at `https://<you>.github.i
 
 ### How Comments Work
 
-Comments are stored as GitHub Issues on your repo (not on the PaperShare repo). Each comment is tagged with the page number. The app detects the repo from the deployed GitHub Pages URL at runtime, so no extra configuration is needed.
+Comments are stored as GitHub Issues on your repo (not on the PaperSharer repo). Each comment is tagged with the page number. The app detects the repo from the deployed GitHub Pages URL at runtime, so no extra configuration is needed.
 
 ## Local Development
 
@@ -65,4 +65,4 @@ npm install
 npm run dev
 ```
 
-The dev server runs at `http://localhost:5173/papershare/`. Place your PDF at `public/paper.pdf`.
+The dev server runs at `http://localhost:5173/papersharer/`. Place your PDF at `public/paper.pdf`.

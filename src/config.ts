@@ -4,14 +4,14 @@ function detectRepo(): { owner: string; repo: string } {
   // GitHub Pages: <owner>.github.io/<repo>/
   if (hostname.endsWith(".github.io")) {
     const owner = hostname.replace(".github.io", "");
-    const repo = pathname.split("/")[1] ?? "papershare";
+    const repo = pathname.split("/")[1] ?? "papersharer";
     return { owner, repo };
   }
 
   // Fallback for local dev — set these to your repo
   return {
     owner: "YOUR_GITHUB_USERNAME",
-    repo: "papershare",
+    repo: "papersharer",
   };
 }
 
@@ -23,6 +23,6 @@ export const config = {
   apiBase: "https://api.github.com",
   token: import.meta.env.VITE_GITHUB_TOKEN as string | undefined,
   pdfUrl: `${import.meta.env.BASE_URL}paper.pdf`,
-  title: (import.meta.env.VITE_PROJECT_TITLE as string) || "PaperShare",
-  label: "papershare",
+  title: (import.meta.env.VITE_PROJECT_TITLE as string) || "PaperSharer",
+  label: "papersharer",
 } as const;

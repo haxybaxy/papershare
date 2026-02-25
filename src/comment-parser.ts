@@ -1,6 +1,6 @@
 import type { CommentMeta } from "./types";
 
-const META_REGEX = /<!--\s*papershare:(.*?)\s*-->/;
+const META_REGEX = /<!--\s*papersharer:(.*?)\s*-->/;
 
 export function serializeComment(
   meta: CommentMeta,
@@ -12,8 +12,8 @@ export function serializeComment(
 
   return {
     title: `[Page ${meta.page}] ${truncated}`,
-    body: `<!-- papershare:${metaJson} -->\n\n${body}\n\n---\n*Posted via PaperShare*`,
-    labels: ["papershare", `page:${meta.page}`],
+    body: `<!-- papersharer:${metaJson} -->\n\n${body}\n\n---\n*Posted via PaperSharer*`,
+    labels: ["papersharer", `page:${meta.page}`],
   };
 }
 
@@ -28,7 +28,7 @@ export function deserializeComment(
     // Extract body: everything after the HTML comment, trimmed, minus the footer
     const afterMeta = issueBody.replace(META_REGEX, "").trim();
     const body = afterMeta
-      .replace(/---\s*\n\*Posted via PaperShare\*\s*$/, "")
+      .replace(/---\s*\n\*Posted via PaperSharer\*\s*$/, "")
       .trim();
     return { meta, body };
   } catch {

@@ -10,7 +10,7 @@ interface CommentFormProps {
   onClearHighlight?: () => void;
 }
 
-const STORAGE_KEY = "papershare_name";
+const STORAGE_KEY = "papersharer_name";
 
 export function CommentForm({
   currentPage,
