@@ -1,0 +1,63 @@
+name: "PaperShare"
+description: "Deploy a PDF to GitHub Pages with page-level comments powered by GitHub Issues"
+
+inputs:
+  pdf-path:
+    description: "Path to the PDF file in the caller's repo"
+    required: true
+  title:
+    description: "Title for the browser tab and page header"
+    required: false
+    default: "PaperShare"
+  github-token:
+    description: "GitHub token with Issues read/write permission (enables comment system)"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Copy PaperShare source to build directory
+      shell: bash
+      run: cp -r "${{ github.action_path }}" /tmp/papershare-build
+
+    - name: Copy caller's PDF into build directory
+      shell: bash
+      run: |
+        PDF_SRC="${{ inputs.pdf-path }}"
+        if [ ! -f "$PDF_SRC" ]; then
+          echo "::error::PDF not found at '${{ inputs.pdf-path }}'"
+          exit 1
+        fi
+        cp "$PDF_SRC" /tmp/papershare-build/public/paper.pdf
+
+    - name: Set page title
+      if: ${{ inputs.title != 'PaperShare' }}
+      shell: bash
+      run: sed -i "s|<title>PaperShare</title>|<title>${{ inputs.title }}</title>|" /tmp/papershare-build/index.html
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: npm
+        cache-dependency-path: /tmp/papershare-build/package-lock.json
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci
+      working-directory: /tmp/papershare-build
+
+    - name: Build
+      shell: bash
+      run: npm run build
+      working-directory: /tmp/papershare-build
+      env:
+        BASE_PATH: /${{ github.event.repository.name }}/
+        VITE_PROJECT_TITLE: ${{ inputs.title }}
+        VITE_GITHUB_TOKEN: ${{ inputs.github-token }}
+
+    - name: Upload Pages artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: /tmp/papershare-build/dist

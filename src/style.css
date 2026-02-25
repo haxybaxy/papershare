@@ -269,6 +269,42 @@ header h1 {
   margin-bottom: 0.75rem;
 }
 
+/* Page groups */
+.page-group {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.page-group:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.page-group.current {
+  background: rgba(37, 99, 235, 0.04);
+  border-radius: 6px;
+  padding: 0.5rem;
+  margin-left: -0.5rem;
+  margin-right: -0.5rem;
+}
+
+.page-group-header {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  position: sticky;
+  top: 0;
+  background: inherit;
+  padding: 0.25rem 0;
+  z-index: 1;
+}
+
+.page-group.current .page-group-header {
+  color: var(--primary);
+}
+
 .comment-card {
   padding: 0.75rem;
   border: 1px solid var(--border);

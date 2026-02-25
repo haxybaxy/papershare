@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { config } from "./config";
-import { serializeComment } from "./comment-parser";
-import { createComment } from "./github-issues";
 import type { CommentMeta, Highlight } from "./types";
 
 interface CommentFormProps {
   currentPage: number;
-  onCommentCreated: () => void;
+  createComment: (args: { meta: CommentMeta; body: string }) => Promise<unknown>;
+  isCreating: boolean;
   highlight?: Highlight;
   onClearHighlight?: () => void;
 }
@@ -15,13 +14,13 @@ const STORAGE_KEY = "papershare_name";
 
 export function CommentForm({
   currentPage,
-  onCommentCreated,
+  createComment,
+  isCreating,
   highlight,
   onClearHighlight,
 }: CommentFormProps) {
   const [name, setName] = useState(() => localStorage.getItem(STORAGE_KEY) ?? "");
   const [body, setBody] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -44,7 +43,6 @@ export function CommentForm({
     const trimmed = body.trim();
     if (!trimmed) return;
 
-    setSubmitting(true);
     setError(null);
     setSuccess(false);
 
@@ -55,19 +53,14 @@ export function CommentForm({
       ...(highlight ? { highlight } : {}),
     };
 
-    const issue = serializeComment(meta, trimmed);
-
     try {
-      await createComment(issue.title, issue.body, issue.labels);
+      await createComment({ meta, body: trimmed });
       setBody("");
       setSuccess(true);
       onClearHighlight?.();
-      onCommentCreated();
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to post comment");
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -97,8 +90,8 @@ export function CommentForm({
           onChange={(e) => setBody(e.target.value)}
           required
         />
-        <button type="submit" disabled={submitting || !body.trim()}>
-          {submitting ? "Posting..." : "Post Comment"}
+        <button type="submit" disabled={isCreating || !body.trim()}>
+          {isCreating ? "Posting..." : "Post Comment"}
         </button>
         {error && <div className="form-error">{error}</div>}
         {success && <div className="form-success">Comment posted!</div>}

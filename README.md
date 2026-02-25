@@ -1,6 +1,6 @@
 # PaperShare
 
-A lightweight PDF viewer with page-level comments, powered by GitHub Issues. Deploy any PDF to GitHub Pages — either for this repo or as a reusable workflow from any other repo.
+A lightweight PDF viewer with page-level comments, powered by GitHub Issues. Deploy any PDF to GitHub Pages as a GitHub Action.
 
 ## Use PaperShare in Your Repo
 
@@ -18,29 +18,36 @@ permissions:
   id-token: write
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: haxybaxy/papershare@v1
+        with:
+          pdf-path: paper.pdf # path to PDF in your repo
+          title: "My Research Paper" # optional, defaults to "PaperShare"
+          github-token: ${{ secrets.PAPERSHARE_TOKEN }} # optional, for comments
+
   deploy:
-    uses: haxybaxy/papershare/.github/workflows/deploy.yml@main
-    with:
-      pdf-path: paper.pdf # path to PDF in your repo
-      title: "My Research Paper" # optional, defaults to "PaperShare"
-    secrets:
-      VITE_GITHUB_TOKEN: ${{ secrets.PAPERSHARE_TOKEN }} # optional, for comments
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
 ```
 
 That's it. Push to `main` and your paper will be live at `https://<you>.github.io/<repo>/`.
 
 ### Inputs
 
-| Input      | Required | Default        | Description                       |
-| ---------- | -------- | -------------- | --------------------------------- |
-| `pdf-path` | Yes      | —              | Path to the PDF file in your repo |
-| `title`    | No       | `"PaperShare"` | Browser tab and page header title |
-
-### Secrets
-
-| Secret              | Required | Description                                                          |
-| ------------------- | -------- | -------------------------------------------------------------------- |
-| `VITE_GITHUB_TOKEN` | No       | GitHub token with `public_repo` scope, needed for the comment system |
+| Input          | Required | Default        | Description                                                          |
+| -------------- | -------- | -------------- | -------------------------------------------------------------------- |
+| `pdf-path`     | Yes      | —              | Path to the PDF file in your repo                                    |
+| `title`        | No       | `"PaperShare"` | Browser tab and page header title                                    |
+| `github-token` | No       | —              | GitHub token with `Issues: Read and write` permission (for comments) |
 
 ### Setup
 
@@ -59,7 +66,3 @@ npm run dev
 ```
 
 The dev server runs at `http://localhost:5173/papershare/`. Place your PDF at `public/paper.pdf`.
-
-## Self-Hosting
-
-If you fork this repo and deploy it directly, it works the same as before — push to `main` and it deploys to your fork's GitHub Pages.

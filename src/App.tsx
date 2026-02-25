@@ -1,19 +1,17 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { PdfViewer } from "./PdfViewer";
 import type { PdfViewerHandle } from "./PdfViewer";
 import { CommentSidebar } from "./CommentSidebar";
 import { CommentForm } from "./CommentForm";
 import { SelectionTooltip } from "./SelectionTooltip";
-import { fetchComments } from "./github-issues";
+import { useComments } from "./useComments";
 import { config } from "./config";
-import type { Comment, TextSelection, Highlight } from "./types";
+import type { TextSelection, Highlight } from "./types";
 import "./style.css";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const [textSelection, setTextSelection] = useState<TextSelection | null>(null);
   const [pendingHighlight, setPendingHighlight] = useState<Highlight | null>(null);
@@ -21,21 +19,7 @@ export default function App() {
 
   const pdfViewerRef = useRef<PdfViewerHandle>(null);
 
-  const loadComments = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await fetchComments();
-      setComments(data);
-    } catch (err) {
-      console.error("Failed to load comments:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadComments();
-  }, [loadComments]);
+  const { comments, isLoading, createComment, isCreating } = useComments();
 
   // Selection flow: user clicks tooltip → capture as pendingHighlight
   const handleCommentOnSelection = useCallback(() => {
@@ -65,11 +49,6 @@ export default function App() {
   // PDF → Sidebar: click highlight overlay to scroll sidebar to comment
   const handleHighlightClick = useCallback((commentId: number) => {
     setActiveCommentId(commentId);
-    // Scroll sidebar to the comment card
-    const card = document.querySelector(
-      `.comment-card[data-comment-id="${commentId}"]`,
-    );
-    card?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, []);
 
   return (
@@ -99,13 +78,14 @@ export default function App() {
           <CommentSidebar
             comments={comments}
             currentPage={currentPage}
-            loading={loading}
+            loading={isLoading}
             onCommentClick={handleCommentClick}
             activeCommentId={activeCommentId}
           />
           <CommentForm
             currentPage={currentPage}
-            onCommentCreated={loadComments}
+            createComment={createComment}
+            isCreating={isCreating}
             highlight={pendingHighlight ?? undefined}
             onClearHighlight={handleClearHighlight}
           />

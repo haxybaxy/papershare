@@ -57,7 +57,7 @@ export async function createComment(
   title: string,
   body: string,
   labels: string[],
-): Promise<void> {
+): Promise<Comment> {
   if (!config.token) {
     throw new Error("No GitHub token configured. Comments are read-only.");
   }
@@ -87,4 +87,17 @@ export async function createComment(
     const err = await res.text();
     throw new Error(`Failed to create issue: ${res.status} ${err}`);
   }
+
+  const issue: GitHubIssue = await res.json();
+  const parsed = deserializeComment(issue.body ?? "");
+  if (!parsed) {
+    throw new Error("Failed to parse created comment");
+  }
+
+  return {
+    id: issue.id,
+    meta: parsed.meta,
+    body: parsed.body,
+    htmlUrl: issue.html_url,
+  };
 }
