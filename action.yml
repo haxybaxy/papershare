@@ -1,4 +1,4 @@
-name: "PaperShare"
+name: "PaperSharer"
 description: "Deploy a PDF to GitHub Pages with page-level comments powered by GitHub Issues"
 
 inputs:
