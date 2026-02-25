@@ -34,7 +34,7 @@ jobs:
     steps:
       # --- Caller repo (workflow_call) ---
       - name: Detect PaperShare repo from workflow_ref
-        if: ${{ inputs.pdf-path != '' }}
+        if: ${{ inputs['pdf-path'] != '' }}
         id: ps-repo
         run: |
           # github.workflow_ref looks like "owner/repo/.github/workflows/deploy.yml@ref"
@@ -42,20 +42,20 @@ jobs:
           echo "slug=$PS_SLUG" >> "$GITHUB_OUTPUT"
 
       - name: Checkout PaperShare source
-        if: ${{ inputs.pdf-path != '' }}
+        if: ${{ inputs['pdf-path'] != '' }}
         uses: actions/checkout@v4
         with:
           repository: ${{ steps.ps-repo.outputs.slug }}
 
       - name: Checkout caller repo
-        if: ${{ inputs.pdf-path != '' }}
+        if: ${{ inputs['pdf-path'] != '' }}
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository }}
           path: _caller
 
       - name: Copy caller's PDF into public/
-        if: ${{ inputs.pdf-path != '' }}
+        if: ${{ inputs['pdf-path'] != '' }}
         run: |
           PDF_SRC="_caller/${{ inputs.pdf-path }}"
           if [ ! -f "$PDF_SRC" ]; then
@@ -65,12 +65,12 @@ jobs:
           cp "$PDF_SRC" public/paper.pdf
 
       - name: Set custom title in index.html
-        if: ${{ inputs.pdf-path != '' && inputs.title != 'PaperShare' }}
+        if: ${{ inputs['pdf-path'] != '' && inputs.title != 'PaperShare' }}
         run: sed -i "s|<title>PaperShare</title>|<title>${{ inputs.title }}</title>|" index.html
 
       # --- Self-deploy (push / workflow_dispatch) ---
       - name: Checkout (self)
-        if: ${{ inputs.pdf-path == '' }}
+        if: ${{ inputs['pdf-path'] == '' }}
         uses: actions/checkout@v4
 
       # --- Common build steps ---
