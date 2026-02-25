@@ -19,28 +19,28 @@ permissions:
 
 jobs:
   deploy:
-    uses: zaidalsaheb/papershare/.github/workflows/deploy.yml@main
+    uses: haxybaxy/papershare/.github/workflows/deploy.yml@main
     with:
-      pdf-path: paper.pdf          # path to PDF in your repo
-      title: "My Research Paper"   # optional, defaults to "PaperShare"
+      pdf-path: paper.pdf # path to PDF in your repo
+      title: "My Research Paper" # optional, defaults to "PaperShare"
     secrets:
-      VITE_GITHUB_TOKEN: ${{ secrets.PAPERSHARE_TOKEN }}  # optional, for comments
+      VITE_GITHUB_TOKEN: ${{ secrets.PAPERSHARE_TOKEN }} # optional, for comments
 ```
 
 That's it. Push to `main` and your paper will be live at `https://<you>.github.io/<repo>/`.
 
 ### Inputs
 
-| Input | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `pdf-path` | Yes | — | Path to the PDF file in your repo |
-| `title` | No | `"PaperShare"` | Browser tab and page header title |
+| Input      | Required | Default        | Description                       |
+| ---------- | -------- | -------------- | --------------------------------- |
+| `pdf-path` | Yes      | —              | Path to the PDF file in your repo |
+| `title`    | No       | `"PaperShare"` | Browser tab and page header title |
 
 ### Secrets
 
-| Secret | Required | Description |
-|--------|----------|-------------|
-| `VITE_GITHUB_TOKEN` | No | GitHub token with `public_repo` scope, needed for the comment system |
+| Secret              | Required | Description                                                          |
+| ------------------- | -------- | -------------------------------------------------------------------- |
+| `VITE_GITHUB_TOKEN` | No       | GitHub token with `public_repo` scope, needed for the comment system |
 
 ### Setup
 
