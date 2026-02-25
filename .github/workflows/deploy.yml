@@ -32,30 +32,34 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # --- Caller repo (workflow_call) ---
-      - name: Detect PaperShare repo from workflow_ref
-        if: ${{ inputs['pdf-path'] != '' }}
-        id: ps-repo
+      # --- Detect whether this is a caller (workflow_call) or self-deploy ---
+      - name: Detect workflow context
+        id: ctx
         run: |
-          # github.workflow_ref looks like "owner/repo/.github/workflows/deploy.yml@ref"
-          PS_SLUG=$(echo "${{ github.workflow_ref }}" | cut -d'/' -f1-2)
-          echo "slug=$PS_SLUG" >> "$GITHUB_OUTPUT"
+          WF_REPO=$(echo "${{ github.workflow_ref }}" | cut -d'/' -f1-2)
+          if [ "$WF_REPO" != "${{ github.repository }}" ]; then
+            echo "external=true" >> "$GITHUB_OUTPUT"
+            echo "ps-slug=$WF_REPO" >> "$GITHUB_OUTPUT"
+          else
+            echo "external=false" >> "$GITHUB_OUTPUT"
+          fi
 
+      # --- Caller repo (workflow_call) ---
       - name: Checkout PaperShare source
-        if: ${{ inputs['pdf-path'] != '' }}
+        if: ${{ steps.ctx.outputs.external == 'true' }}
         uses: actions/checkout@v4
         with:
-          repository: ${{ steps.ps-repo.outputs.slug }}
+          repository: ${{ steps.ctx.outputs.ps-slug }}
 
       - name: Checkout caller repo
-        if: ${{ inputs['pdf-path'] != '' }}
+        if: ${{ steps.ctx.outputs.external == 'true' }}
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository }}
           path: _caller
 
       - name: Copy caller's PDF into public/
-        if: ${{ inputs['pdf-path'] != '' }}
+        if: ${{ steps.ctx.outputs.external == 'true' }}
         run: |
           PDF_SRC="_caller/${{ inputs.pdf-path }}"
           if [ ! -f "$PDF_SRC" ]; then
@@ -65,12 +69,12 @@ jobs:
           cp "$PDF_SRC" public/paper.pdf
 
       - name: Set custom title in index.html
-        if: ${{ inputs['pdf-path'] != '' && inputs.title != 'PaperShare' }}
+        if: ${{ steps.ctx.outputs.external == 'true' && inputs.title != 'PaperShare' }}
         run: sed -i "s|<title>PaperShare</title>|<title>${{ inputs.title }}</title>|" index.html
 
       # --- Self-deploy (push / workflow_dispatch) ---
       - name: Checkout (self)
-        if: ${{ inputs['pdf-path'] == '' }}
+        if: ${{ steps.ctx.outputs.external == 'false' }}
         uses: actions/checkout@v4
 
       # --- Common build steps ---
