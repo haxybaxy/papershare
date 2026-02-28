@@ -88,29 +88,69 @@ header h1 {
 /* pdfjs text layer — transparent selectable text on top of canvas */
 .textLayer {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   z-index: 2;
-  overflow: hidden;
+  overflow: clip;
   line-height: 1;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: CanvasText;
+
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
 }
 
-.textLayer span,
-.textLayer br {
+.textLayer :is(span, br) {
   color: transparent;
   position: absolute;
   white-space: pre;
+  cursor: text;
   transform-origin: 0% 0%;
 }
 
-.textLayer span::selection {
+.textLayer > :not(.markedContent),
+.textLayer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+
+.textLayer .markedContent {
+  display: contents;
+}
+
+.textLayer ::selection {
   background: rgba(37, 99, 235, 0.3);
 }
 
-.textLayer span::-moz-selection {
+.textLayer ::-moz-selection {
   background: rgba(37, 99, 235, 0.3);
+}
+
+.textLayer br::selection {
+  background: transparent;
+}
+
+.textLayer br::-moz-selection {
+  background: transparent;
+}
+
+.textLayer .endOfContent {
+  display: block;
+  position: absolute;
+  inset: 100% 0 0;
+  z-index: 0;
+  cursor: default;
+  user-select: none;
+}
+
+.textLayer.selecting .endOfContent {
+  top: 0;
 }
 
 /* Highlight overlay layer — between canvas and text layer */
@@ -150,7 +190,7 @@ header h1 {
 
 /* Selection tooltip — floating button near text selection */
 .selection-tooltip {
-  position: fixed;
+  position: absolute;
   z-index: 100;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -164,6 +204,16 @@ header h1 {
   white-space: nowrap;
   transition: background 0.15s;
   user-select: none;
+  transform: translateX(-50%);
+}
+
+/* Pending highlight overlay — shown while tooltip visible or filling comment form */
+.pending-highlight-rect {
+  position: absolute;
+  background: rgba(255, 213, 79, 0.45);
+  border-bottom: 2px solid var(--highlight-border);
+  border-radius: 2px;
+  pointer-events: none;
 }
 
 .selection-tooltip:hover {

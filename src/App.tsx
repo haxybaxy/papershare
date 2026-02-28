@@ -3,7 +3,6 @@ import { PdfViewer } from "./PdfViewer";
 import type { PdfViewerHandle } from "./PdfViewer";
 import { CommentSidebar } from "./CommentSidebar";
 import { CommentForm } from "./CommentForm";
-import { SelectionTooltip } from "./SelectionTooltip";
 import { useComments } from "./useComments";
 import { config } from "./config";
 import type { TextSelection, Highlight } from "./types";
@@ -30,7 +29,6 @@ export default function App() {
       rects: textSelection.rects,
     });
     setTextSelection(null);
-    window.getSelection()?.removeAllRanges();
   }, [textSelection]);
 
   const handleClearHighlight = useCallback(() => {
@@ -67,13 +65,10 @@ export default function App() {
           comments={comments}
           onHighlightClick={handleHighlightClick}
           onTextSelect={setTextSelection}
+          activeSelection={textSelection}
+          pendingHighlight={pendingHighlight}
+          onComment={handleCommentOnSelection}
         />
-        {textSelection && (
-          <SelectionTooltip
-            selection={textSelection}
-            onComment={handleCommentOnSelection}
-          />
-        )}
         <aside id="sidebar">
           <CommentSidebar
             comments={comments}

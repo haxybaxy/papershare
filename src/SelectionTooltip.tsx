@@ -10,8 +10,8 @@ export function SelectionTooltip({ selection, onComment }: SelectionTooltipProps
     <div
       className="selection-tooltip"
       style={{
-        top: selection.tooltipPosition.top,
-        left: selection.tooltipPosition.left,
+        left: `${selection.tooltipPosition.xPercent}%`,
+        top: `${selection.tooltipPosition.yPercent}%`,
       }}
       onMouseDown={(e) => {
         e.preventDefault();

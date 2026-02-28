@@ -10,7 +10,9 @@ import * as pdfjsLib from "pdfjs-dist";
 import { TextLayer } from "pdfjs-dist";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { config } from "./config";
-import type { Comment, TextSelection } from "./types";
+import { mergeRects } from "./highlight-utils";
+import { SelectionTooltip } from "./SelectionTooltip";
+import type { Comment, TextSelection, Highlight } from "./types";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.mjs",
@@ -25,6 +27,9 @@ interface PdfViewerProps {
   comments: Comment[];
   onHighlightClick: (commentId: number) => void;
   onTextSelect: (selection: TextSelection | null) => void;
+  activeSelection: TextSelection | null;
+  pendingHighlight: Highlight | null;
+  onComment: () => void;
 }
 
 export interface PdfViewerHandle {
@@ -33,7 +38,16 @@ export interface PdfViewerHandle {
 
 export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
   function PdfViewer(
-    { onPageChange, onTotalPages, comments, onHighlightClick, onTextSelect },
+    {
+      onPageChange,
+      onTotalPages,
+      comments,
+      onHighlightClick,
+      onTextSelect,
+      activeSelection,
+      pendingHighlight,
+      onComment,
+    },
     ref,
   ) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -108,7 +122,6 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     useEffect(() => {
       if (numPages === 0) return;
 
-      // Small delay to let DOM mount page wrappers
       const id = requestAnimationFrame(() => {
         for (let i = 1; i <= numPages; i++) {
           renderPage(i);
@@ -164,14 +177,12 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       const handleMouseUp = () => {
         const sel = window.getSelection();
         if (!sel || sel.isCollapsed || !sel.rangeCount) {
-          onTextSelect(null);
           return;
         }
 
         const range = sel.getRangeAt(0);
         const text = sel.toString().trim();
         if (!text) {
-          onTextSelect(null);
           return;
         }
 
@@ -189,54 +200,95 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
           node = node.parentNode;
         }
         if (!pageEl) {
-          onTextSelect(null);
           return;
         }
 
         const pageNum = Number(pageEl.dataset.pageNumber);
         const pageRect = pageEl.getBoundingClientRect();
 
-        // Convert client rects to page-relative percentages
+        // Convert client rects to page-relative percentages, clamping to page bounds
         const clientRects = range.getClientRects();
-        const rects = [];
+        const rawRects = [];
         for (let i = 0; i < clientRects.length; i++) {
           const r = clientRects[i];
-          rects.push({
-            x: ((r.left - pageRect.left) / pageRect.width) * 100,
-            y: ((r.top - pageRect.top) / pageRect.height) * 100,
-            width: (r.width / pageRect.width) * 100,
-            height: (r.height / pageRect.height) * 100,
+
+          // Skip rects outside the page bounds (cross-page selection)
+          if (
+            r.bottom < pageRect.top ||
+            r.top > pageRect.bottom ||
+            r.right < pageRect.left ||
+            r.left > pageRect.right
+          ) {
+            continue;
+          }
+
+          // Clamp to page bounds
+          const clampedLeft = Math.max(r.left, pageRect.left);
+          const clampedTop = Math.max(r.top, pageRect.top);
+          const clampedRight = Math.min(r.right, pageRect.right);
+          const clampedBottom = Math.min(r.bottom, pageRect.bottom);
+
+          rawRects.push({
+            x: ((clampedLeft - pageRect.left) / pageRect.width) * 100,
+            y: ((clampedTop - pageRect.top) / pageRect.height) * 100,
+            width: ((clampedRight - clampedLeft) / pageRect.width) * 100,
+            height: ((clampedBottom - clampedTop) / pageRect.height) * 100,
           });
         }
 
-        // Position tooltip near end of selection
-        const lastRect = clientRects[clientRects.length - 1];
+        if (rawRects.length === 0) return;
+
+        const rects = mergeRects(rawRects);
+
+        // Position tooltip below the last merged rect, centered horizontally (page-relative %)
+        const lastRect = rects[rects.length - 1];
         const tooltipPosition = {
-          top: lastRect.bottom + 8,
-          left: lastRect.left + lastRect.width / 2,
+          xPercent: lastRect.x + lastRect.width / 2,
+          yPercent: lastRect.y + lastRect.height + 0.5,
         };
 
         onTextSelect({ page: pageNum, text, rects, tooltipPosition });
+
+        // Clear browser's blue selection immediately
+        sel.removeAllRanges();
       };
 
       container.addEventListener("mouseup", handleMouseUp);
       return () => container.removeEventListener("mouseup", handleMouseUp);
     }, [onTextSelect]);
 
-    // Clear selection when clicking outside text layers
+    // Targeted clearing listeners (replaces blanket document mousedown)
     useEffect(() => {
-      const handleMouseDown = (e: MouseEvent) => {
-        const target = e.target as HTMLElement;
-        if (
-          !target.closest(".textLayer") &&
-          !target.closest(".selection-tooltip")
-        ) {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") {
           onTextSelect(null);
         }
       };
 
+      const handleMouseDown = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+
+        // Don't clear if clicking the tooltip itself
+        if (target.closest(".selection-tooltip")) return;
+
+        // Click on a textLayer starts a new drag — clear previous selection
+        if (target.closest(".textLayer")) {
+          onTextSelect(null);
+          return;
+        }
+
+        // Click outside #pdf-container clears selection
+        if (!target.closest("#pdf-container")) {
+          onTextSelect(null);
+        }
+      };
+
+      document.addEventListener("keydown", handleKeyDown);
       document.addEventListener("mousedown", handleMouseDown);
-      return () => document.removeEventListener("mousedown", handleMouseDown);
+      return () => {
+        document.removeEventListener("keydown", handleKeyDown);
+        document.removeEventListener("mousedown", handleMouseDown);
+      };
     }, [onTextSelect]);
 
     // Imperative handle for scroll-to-highlight
@@ -258,7 +310,7 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       },
     }));
 
-    // Build highlight data per page from comments
+    // Build highlight data per page from comments, applying mergeRects
     const highlightsByPage = new Map<
       number,
       { commentId: number; rects: { x: number; y: number; width: number; height: number }[] }[]
@@ -267,15 +319,24 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       const h = comment.meta.highlight;
       if (!h) continue;
       const list = highlightsByPage.get(h.page) || [];
-      list.push({ commentId: comment.id, rects: h.rects });
+      list.push({ commentId: comment.id, rects: mergeRects(h.rects) });
       highlightsByPage.set(h.page, list);
     }
+
+    // Build pending overlay rects per page (from activeSelection or pendingHighlight)
+    const pendingOverlay = activeSelection
+      ? { page: activeSelection.page, rects: activeSelection.rects }
+      : pendingHighlight
+        ? { page: pendingHighlight.page, rects: pendingHighlight.rects }
+        : null;
 
     return (
       <section id="pdf-container" ref={containerRef}>
         {Array.from({ length: numPages }, (_, i) => {
           const pageNum = i + 1;
           const pageHighlights = highlightsByPage.get(pageNum) || [];
+          const showPending = pendingOverlay && pendingOverlay.page === pageNum;
+          const showTooltip = activeSelection && activeSelection.page === pageNum;
 
           return (
             <div
@@ -301,8 +362,27 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
                     />
                   )),
                 )}
+                {showPending &&
+                  pendingOverlay.rects.map((rect, ri) => (
+                    <div
+                      key={`pending-${ri}`}
+                      className="pending-highlight-rect"
+                      style={{
+                        left: `${rect.x}%`,
+                        top: `${rect.y}%`,
+                        width: `${rect.width}%`,
+                        height: `${rect.height}%`,
+                      }}
+                    />
+                  ))}
               </div>
               <div className="textLayer" />
+              {showTooltip && (
+                <SelectionTooltip
+                  selection={activeSelection}
+                  onComment={onComment}
+                />
+              )}
             </div>
           );
         })}

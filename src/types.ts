@@ -15,7 +15,7 @@ export interface TextSelection {
   page: number;
   text: string;
   rects: HighlightRect[];
-  tooltipPosition: { top: number; left: number };
+  tooltipPosition: { xPercent: number; yPercent: number };
 }
 
 export interface CommentMeta {
